@@ -1,4 +1,5 @@
-const maskCPF = (value) => {
+// A palavra 'export' é OBRIGATÓRIA aqui para funcionar em outros arquivos
+export const maskCPF = (value) => {
   return value
     .replace(/\D/g, "") 
     .replace(/(\d{3})(\d)/, "$1.$2") 
@@ -7,8 +8,7 @@ const maskCPF = (value) => {
     .replace(/(-\d{2})\d+?$/, "$1"); 
 };
 
-
-const maskPhone = (value) => {
+export const maskPhone = (value) => {
   return value
     .replace(/\D/g, "") 
     .replace(/(\d{2})(\d)/, "($1) $2") 

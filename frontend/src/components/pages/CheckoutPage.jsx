@@ -3,7 +3,10 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "../atoms/button";
 import { toast } from "sonner";
 import { useOutletContext, useNavigate } from "react-router";
-import { useAuth } from "../../hooks/useAuth"; // Importante para o Token
+import { useAuth } from "../../hooks/useAuth";
+
+// --- IMPORTANTE: Importando as máscaras ---
+import { maskCPF, maskPhone } from "../../util/masks"; 
 
 import { AddressForm } from "../molecules/AddressForm";
 import { PaymentSelector } from "../molecules/PaymentSelector";
@@ -12,13 +15,12 @@ import { OrderService } from "../../services/orders/OrderService";
 
 export function CheckoutPage() {
     const navigate = useNavigate();
-    const { firebaseUser } = useAuth(); // Pega o usuário logado
+    const { firebaseUser } = useAuth();
 
     const context = useOutletContext();
     const rawCartItems = context?.cartItems || [];
     const clearCart = context?.clearCart || (() => {});
 
-    // 1. Normaliza os itens (Garante que preço seja número e não NaN)
     const cartItems = rawCartItems.map((item) => {
         const realPrice = Number(item.price) || Number(item.basePrice) || 0;
         return { ...item, price: realPrice };
@@ -41,7 +43,6 @@ export function CheckoutPage() {
     const [paymentMethod, setPaymentMethod] = useState("pix");
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // Cálculos
     const subtotal = cartItems.reduce(
         (sum, item) => sum + item.price * item.quantity,
         0
@@ -49,8 +50,21 @@ export function CheckoutPage() {
     const shipping = subtotal > 200 ? 0 : 25.0;
     const total = subtotal + shipping;
 
+    // --- FUNÇÃO CORRIGIDA PARA APLICAR AS MÁSCARAS ---
     const handleInputChange = (field, value) => {
-        setDeliveryInfo((prev) => ({ ...prev, [field]: value }));
+        let newValue = value;
+
+        // Se for CPF, formata
+        if (field === "document") {
+            newValue = maskCPF(value);
+        }
+        
+        // Se for Telefone, formata
+        if (field === "phone") {
+            newValue = maskPhone(value);
+        }
+
+        setDeliveryInfo((prev) => ({ ...prev, [field]: newValue }));
     };
 
     const formatPrice = (price) => {
@@ -82,13 +96,12 @@ export function CheckoutPage() {
         try {
             const token = await firebaseUser.getIdToken();
 
-            // Payload estritamente tipado conforme esperado pelo backend
             const orderPayload = {
                 customer: {
                     name: deliveryInfo.name,
                     email: deliveryInfo.email,
                     phone: deliveryInfo.phone,
-                    taxId: deliveryInfo.document, // CPF
+                    taxId: deliveryInfo.document,
                 },
                 billingAddress: {
                     zipCode: deliveryInfo.zipCode,
@@ -100,12 +113,11 @@ export function CheckoutPage() {
                     complement: deliveryInfo.complement,
                 },
                 items: cartItems.map((item) => ({
-                    id: item.productId || item.id, // Garante ID numérico
+                    id: item.productId || item.id,
                     quantity: item.quantity,
-                    // O backend vai recalcular o preço por segurança, mas enviamos aqui
                     unitPrice: item.price,
                 })),
-                amount: Math.round(total * 100), // Total em centavos
+                amount: Math.round(total * 100),
                 paymentMethod:
                     paymentMethod.toUpperCase() === "CARD"
                         ? "CREDIT_CARD"
@@ -113,13 +125,11 @@ export function CheckoutPage() {
             };
 
             const data = await OrderService.create(orderPayload, token);
-
             const { paymentUrl } = data;
 
             toast.success("Pedido gerado! Redirecionando para pagamento...");
             clearCart();
 
-            // Redirecionamento vital
             if (paymentUrl) {
                 setTimeout(() => {
                     window.location.href = paymentUrl;
@@ -172,6 +182,7 @@ export function CheckoutPage() {
 
                 <div className="grid lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-6">
+                        {/* AddressForm recebe deliveryInfo e a função handleInputChange */}
                         <AddressForm
                             deliveryInfo={deliveryInfo}
                             onChange={handleInputChange}
