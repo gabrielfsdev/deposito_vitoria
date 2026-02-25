@@ -4,7 +4,7 @@ import {auth} from "../config/firebase";
 export const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || "http://localhost:3000/",
 
-    timeout: 10000,
+    timeout: 60000,
     headers: {
         "Content-Type": "application/json",
     },

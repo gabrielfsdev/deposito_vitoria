@@ -37,10 +37,12 @@ enum Role {
 
 model Product {
   productId    Int        @id @default(autoincrement())
+  sku          String?    @unique @db.VarChar(50) // Para salvar o "Código" da planilha
   name         String     @db.VarChar(255)
   description  String?    @db.Text
+  unit         String?    @db.VarChar(10) // Para salvar se é UN, MT, PC, etc.
   basePrice    Decimal    @db.Decimal(10, 2)
-  stock        Int
+  stock        Decimal    @db.Decimal(10, 2) // Mudando de Int para Decimal
   brand        String?    @db.VarChar(100)
   category     String?    @db.VarChar(100)
 
